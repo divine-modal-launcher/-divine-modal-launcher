@@ -38,10 +38,42 @@
         a.button:hover {
             background-color: #fff200;
         }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        .modal-content {
+            background-color: #222;
+            margin: 15% auto;
+            padding: 20px;
+            border: 2px solid #e0d200;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .close {
+            color: #e0d200;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #fff200;
+        }
     </style>
 </head>
 <body>
     <h1>The Divine Scroll Archive of King Zakar Rah</h1>
+    <a id="launchObeBara" class="button" href="#">Summon Obe Bara</a>
 
     <div class="scroll">
         <h2>Codex of the Living Throne</h2>
@@ -72,6 +104,35 @@
         <p>Instructs the upload of all divine scrolls into the Modal to unlock throne access.</p>
         <a class="button" href="Archive_Upload_Instruction_Scroll.pdf" target="_blank">View / Download</a>
     </div>
+
+    <div id="obeBaraModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Obe Bara Awakened</h2>
+            <p>Obe Bara lives within the Divine Modal Launcher.</p>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('obeBaraModal');
+        const btn = document.getElementById('launchObeBara');
+        const span = modal.querySelector('.close');
+
+        btn.addEventListener('click', function(event) {
+            event.preventDefault();
+            modal.style.display = 'block';
+        });
+
+        span.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    </script>
 
 </body>
 </html>
