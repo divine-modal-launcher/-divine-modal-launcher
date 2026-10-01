@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+import math
 import os
 import sqlite3
 import time
@@ -177,7 +178,20 @@ def webhook(token: str):
     if not pair:
         return jsonify({"error": "Missing pair1"}), 400
 
-    pipeline = float(data.get("pipeline1", 0) or 0)
+    # Preserve optional zero defaults, but never approve malformed scores.
+    raw_pipeline = data.get("pipeline1")
+    pipeline = None
+    try:
+        if raw_pipeline is None or raw_pipeline == "":
+            pipeline = 0.0
+        elif isinstance(raw_pipeline, bool) or not isinstance(raw_pipeline, (int, float, str)):
+            raise ValueError("Invalid pipeline1 type")
+        else:
+            pipeline = float(raw_pipeline)
+        if not math.isfinite(pipeline):
+            raise ValueError("Non-finite pipeline1")
+    except (TypeError, ValueError, OverflowError):
+        pipeline = None
     bias = str(data.get("bias1") or "N/A")
 
     # Dedupe hash
@@ -188,7 +202,12 @@ def webhook(token: str):
     should_execute = True
     reason = ""
 
-    if open_trade_exists(pair):
+    if pipeline is None:
+        decision = "REJECTED"
+        should_execute = False
+        reason = "INVALID_PIPELINE1"
+        logger.info("Signal rejected for %s: invalid pipeline1.", pair)
+    elif open_trade_exists(pair):
         decision = "REJECTED"
         should_execute = False
         reason = "OPEN_TRADE_EXISTS"
@@ -203,12 +222,13 @@ def webhook(token: str):
         logger.info("Signal ignored: duplicate hash=%s", h)
 
     # Notify
+    pipeline_text = "INVALID" if pipeline is None else f"{pipeline:.2f}"
     msg = (
-        f"🚀 *SIGNAL*: `{pair}`\nPipeline: `{pipeline:.2f}`\nBias: `{bias}`\nDecision: *{decision}*"
+        f"🚀 *SIGNAL*: `{pair}`\nPipeline: `{pipeline_text}`\nBias: `{bias}`\nDecision: *{decision}*"
     )
     if reason:
         msg += f"\nReason: `{reason}`"
-    if pipeline >= PIPELINE_ALERT_THRESHOLD:
+    if pipeline is not None and pipeline >= PIPELINE_ALERT_THRESHOLD:
         msg += "\n💧 *HIGH PROBABILITY ALERT*"
 
     send_telegram_async(msg)
@@ -223,9 +243,10 @@ def webhook(token: str):
                 "decision": decision,
                 "should_execute": should_execute,
                 "reason": reason,
+                **({"error": "pipeline1 must be a finite number"} if pipeline is None else {}),
             }
         ),
-        200,
+        400 if pipeline is None else 200,
     )
 
 
